@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bastion WC3 — Les 4 Factions</title>
+  <title>Bastion WC3 — Temps Réel & Factions</title>
   <style>
     /* THÈME PAR DÉFAUT : ALLIANCE */
     :root {
@@ -71,6 +71,7 @@
     }
     .bastion-title h1 { font-size: 1.45rem; color: #fde047; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
     .bastion-title span { font-size: 0.9rem; color: #cbd5e1; }
+    .live-clock { font-size: 0.8rem; color: #fde047; margin-top: 4px; font-weight: 600; }
 
     .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
@@ -189,7 +190,7 @@
     <div class="bastion-title">
       <h1 id="ui-tier-title">🏰 Hôtel de Ville de l'Alliance (Tiers 1)</h1>
       <span id="ui-status-sub">Semaine 1 • Prêt à défendre le Royaume</span>
-      <div id="live-clock" style="font-size: 0.8rem; color: #fde047; margin-top: 4px;"></div>
+      <div id="live-clock" class="live-clock">🕒 Chargement de l'horloge...</div>
     </div>
     <div class="header-actions">
       <select id="faction-select" class="faction-select" onchange="changeFaction(this.value)">
@@ -328,7 +329,6 @@
   </main>
 
   <script>
-    // 1. CONFIGURATION MODULAIRE DES 4 FACTIONS DE WARCRAFT III
     const FACTIONS = {
       alliance: {
         name: "Alliance de Lordaeron",
@@ -514,7 +514,7 @@
       { name: "Couronne des Rois", def: 25 }
     ];
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const getTodayString = () => new Date().toISOString().split('T')[0];
 
     const defaultState = {
       faction: "alliance",
@@ -528,7 +528,7 @@
       militiaActiveToday: false,
       truceMode: false,
       reconstructionBoost: false,
-      lastDate: todayStr,
+      lastDate: getTodayString(),
       hero: {
         type: "paladin",
         level: 1,
@@ -551,18 +551,22 @@
 
     let state = JSON.parse(localStorage.getItem("bastion_wc3_v2")) || defaultState;
 
-    // VÉRIFICATION AUTOMATIQUE DU PASSAGE DES JOURS
-    if (state.lastDate && state.lastDate !== todayStr) {
-      state.dailies.forEach(t => t.done = false);
-      state.hero.spellUsedToday = false;
-      state.militiaActiveToday = false;
-      state.lastDate = todayStr;
-      log("🌅 Un nouveau jour s'est levé ! Les tâches quotidiennes ont été réinitialisées automatiquement.");
-    } else if (!state.lastDate) {
-      state.lastDate = todayStr;
+    // VÉRIFICATION CONTINUE DU CHANGEMENT DE JOUR
+    function checkDayChange() {
+      const currentDayStr = getTodayString();
+      if (state.lastDate && state.lastDate !== currentDayStr) {
+        state.dailies.forEach(t => t.done = false);
+        state.hero.spellUsedToday = false;
+        state.militiaActiveToday = false;
+        state.lastDate = currentDayStr;
+        log("🌅 Un nouveau jour s'est levé en temps réel ! Tâches quotidiennes réinitialisées.");
+        save();
+      }
     }
 
-    // Sécurité si la sauvegarde vient d'une version précédente
+    // Exécuter la vérification au démarrage
+    checkDayChange();
+
     if (!FACTIONS[state.faction]) state.faction = "alliance";
     if (!FACTIONS[state.faction].heroes[state.hero.type]) {
       state.hero.type = Object.keys(FACTIONS[state.faction].heroes)[0];
@@ -582,15 +586,13 @@
       box.prepend(div);
     }
 
-    // RÉINITIALISATION COMPLÈTE (RESET)
     function resetGame() {
-      if (confirm("⚠️ Veux-tu vraiment effacer toute ta progression pour recommencer au Tiers 1 ? (Toutes les factions et races restent disponibles, mais tes ressources, ton niveau et ton Héros seront réinitialisés).")) {
+      if (confirm("⚠️ Veux-tu vraiment effacer toute ta progression pour recommencer au Tiers 1 ?")) {
         localStorage.removeItem("bastion_wc3_v2");
         location.reload();
       }
     }
 
-    // CHANGEMENT DE FACTION EN DIRECT
     function changeFaction(newFaction) {
       if (!FACTIONS[newFaction]) return;
       state.faction = newFaction;
@@ -600,15 +602,13 @@
       save();
     }
 
-    // CALCUL DE L'ENTRETIEN (UPKEEP)
     function getUpkeepMultiplier() {
       const count = state.dailies.length;
       if (count <= 4) return { mult: 1, label: "Aucun (100%)", color: "#4ade80", sub: `${count}/4 habitudes (Optimal)` };
       if (count <= 6) return { mult: 0.8, label: "Faible (80%)", color: "#facc15", sub: `${count} habitudes (Attention à la surcharge)` };
-      return { mult: 0.5, label: "Élevé (50%)", color: "#f87171", sub: `${count} habitudes (Trop de tâches ! Déplace en Creeps)` };
+      return { mult: 0.5, label: "Élevé (50%)", color: "#f87171", sub: `${count} habitudes (Trop de tâches !)` };
     }
 
-    // CALCUL DE LA DÉFENSE TOTALE
     function getTotalDefense() {
       const f = FACTIONS[state.faction];
       const tierDef = f.tiers[state.tierIndex].baseDef;
@@ -624,7 +624,6 @@
       return 65 + (state.week * 30);
     }
 
-    // ACTIONS QUOTIDIENNES
     function completeDaily(id) {
       if (state.truceMode) return log("Mode Trêve actif : quitte la trêve pour valider des tâches.");
       const task = state.dailies.find(t => t.id === id);
@@ -640,7 +639,7 @@
       state[task.cat] += finalGain;
       if (state.militiaActiveToday) state.tempDef += 5;
 
-      log(`${f.workerName} au travail : "${task.title}" (+${finalGain} ${task.cat}${state.militiaActiveToday ? " & +5 Déf" : ""}).`);
+      log(`${f.workerName} au travail : "${task.title}" (+${finalGain} ${task.cat}).`);
       save();
     }
 
@@ -660,7 +659,6 @@
       save();
     }
 
-    // CREEPING (TÂCHES PONCTUELLES)
     function addCreep() {
       const input = document.getElementById("creep-title");
       const diff = document.getElementById("creep-diff").value;
@@ -716,11 +714,10 @@
       if (state.hero.xp >= needed) {
         state.hero.xp -= needed;
         state.hero.level = Math.min(10, state.hero.level + 1);
-        log(`🎉 LEVEL UP ! Ton Héros atteint le Niveau ${state.hero.level} (+10 Défense permanente) !`);
+        log(`🎉 LEVEL UP ! Ton Héros atteint le Niveau ${state.hero.level} (+10 Défense) !`);
       }
     }
 
-    // HÉROS & CAPACITÉS SPÉCIALES
     function changeHero() {
       const val = document.getElementById("hero-select").value;
       state.hero.type = val;
@@ -747,7 +744,6 @@
       save();
     }
 
-    // BÂTIMENTS & TIERS
     function upgradeBuilding(key) {
       if (state.truceMode) return;
       const b = FACTIONS[state.faction].buildings[key];
@@ -762,7 +758,7 @@
       if (state.truceMode || state.tierIndex >= 2) return;
       const nextTier = FACTIONS[state.faction].tiers[state.tierIndex + 1];
       if (state.materiaux < nextTier.costWood || state.savoir < nextTier.costGold) {
-        return log(`Il te faut ${nextTier.costWood} 🪵 et ${nextTier.costGold} 🪙 pour passer au ${nextTier.name}.`);
+        return log(`Il te faut ${nextTier.costWood} 🪵 et ${nextTier.costGold} 🪙 pour évoluer.`);
       }
       state.materiaux -= nextTier.costWood;
       state.savoir -= nextTier.costGold;
@@ -771,19 +767,18 @@
       save();
     }
 
-    // CYCLE & SIÈGE
     function newDay() {
       state.dailies.forEach(t => t.done = false);
       state.hero.spellUsedToday = false;
       state.militiaActiveToday = false;
-      state.lastDate = new Date().toISOString().split('T')[0];
-      log("🌅 Une nouvelle journée commence. Tâches quotidiennes et sort du Héros réinitialisés.");
+      state.lastDate = getTodayString();
+      log("🌅 Une nouvelle journée commence. Tâches quotidiennes et sort réinitialisés.");
       save();
     }
 
     function toggleTruce() {
       state.truceMode = !state.truceMode;
-      log(state.truceMode ? "❄️ Mode Trêve activé : le Bastion est gelé." : "🔥 Fin de la Trêve : reprise des opérations.");
+      log(state.truceMode ? "❄️ Mode Trêve activé : le Bastion est gelé." : "🔥 Fin de la Trêve.");
       save();
     }
 
@@ -796,12 +791,12 @@
         state.week++;
         state.reconstructionBoost = false;
         gainHeroXp(50);
-        log(`🏆 VICTOIRE HÉROÏQUE (${def} contre ${threat}) ! Le siège est brisé, ton Héros gagne +50 XP !`);
+        log(`🏆 VICTOIRE HÉROÏQUE (${def} vs ${threat}) ! Siège brisé, +50 XP !`);
       } else {
         state.week++;
         state.reconstructionBoost = true;
         if (state.buildings.remparts > 1) state.buildings.remparts--;
-        log(`🛡️ REPLI STRATÉGIQUE (${def} contre ${threat}). Les murs ont souffert, mais "Effort de Reconstruction (Gains x2)" est activé !`);
+        log(`🛡️ REPLI STRATÉGIQUE (${def} vs ${threat}). Effort de Reconstruction activé !`);
       }
 
       state.tempDef = 0;
@@ -812,12 +807,22 @@
       save();
     }
 
-    // RENDU UI
+    // BOUCLE TEMPS RÉEL (HORLOGE ET CHANGEMENT DE JOUR AUTOMATIQUE)
+    function realTimeTick() {
+      checkDayChange(); // Vérifie si le jour a changé en arrière-plan
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const clockEl = document.getElementById("live-clock");
+      if (clockEl) {
+        clockEl.textContent = "🕒 " + now.toLocaleDateString('fr-FR', options);
+      }
+    }
+    setInterval(realTimeTick, 1000); // Actualise chaque seconde
+
     function render() {
       const f = FACTIONS[state.faction];
       const tier = f.tiers[state.tierIndex];
 
-      // Appliquer le thème visuel des 4 factions
       document.body.className = f.themeClass;
       document.getElementById("faction-select").value = state.faction;
 
@@ -826,7 +831,7 @@
       document.getElementById("ui-altar-title").textContent = f.altarName;
 
       document.getElementById("ui-status-sub").textContent = state.truceMode
-        ? `❄️ Mode Trêve Actif — Aucune pénalité`
+        ? `❄️ Mode Trêve Actif`
         : state.reconstructionBoost
           ? `🔨 Effort de Reconstruction Actif (Gains doublés !)`
           : `Semaine ${state.week} • ${f.motto}`;
@@ -841,12 +846,10 @@
       upLabel.style.color = upkeep.color;
       document.getElementById("ui-upkeep-sub").textContent = upkeep.sub;
 
-      // Boutons globaux
       document.getElementById("btn-militia").disabled = state.militiaUsedThisWeek || state.truceMode;
-      document.getElementById("btn-militia").textContent = state.militiaUsedThisWeek ? "Capacité déjà utilisée (Semaine)" : f.specialBtn;
+      document.getElementById("btn-militia").textContent = state.militiaUsedThisWeek ? "Capacité utilisée" : f.specialBtn;
       document.getElementById("btn-truce").textContent = state.truceMode ? "🔥 Quitter la Trêve" : "❄️ Mode Trêve";
 
-      // Liste Habitudes
       const dList = document.getElementById("daily-list");
       dList.innerHTML = "";
       const catNames = { vivres: "🍖 Ravitaillement", materiaux: "🪵 Bois", savoir: "🪙 Or & Savoir" };
@@ -868,13 +871,12 @@
         dList.appendChild(div);
       });
 
-      // Liste Creeps
       const cList = document.getElementById("creep-list");
       cList.innerHTML = "";
       const diffLabels = {
         green: { text: "🟢 Camp Gnoll (+35 XP, +15 🪙)", cls: "tag-green" },
         orange: { text: "🟠 Camp Ogre (+70 XP, +30 🪙)", cls: "tag-orange" },
-        red: { text: "🔴 Dragon Rouge (+120 XP, +60 🪙, Objet 100%)", cls: "tag-red" }
+        red: { text: "🔴 Dragon Rouge (+120 XP, +60 🪙)", cls: "tag-red" }
       };
       state.creeps.forEach(c => {
         const div = document.createElement("div");
@@ -890,7 +892,6 @@
         cList.appendChild(div);
       });
 
-      // Menu déroulant dynamique des Héros selon la faction active
       const heroSelect = document.getElementById("hero-select");
       heroSelect.innerHTML = "";
       Object.keys(f.heroes).forEach(hKey => {
@@ -929,7 +930,6 @@
         invGrid.appendChild(slot);
       }
 
-      // Bâtiments & Tiers
       const tierBtn = document.getElementById("btn-upgrade-tier");
       if (state.tierIndex >= 2) {
         tierBtn.textContent = `🏰 ${tier.name} Max (Tiers 3)`;
@@ -950,31 +950,20 @@
         card.innerHTML = `
           <div>
             <strong>${b.name}</strong> (Niv. ${lvl})
-            <div style="font-size:0.78rem; color:var(--muted);">Défense : +${lvl * b.def} (+${b.def}/niv)</div>
+            <div style="font-size:0.78rem; color:var(--muted);">Défense : +${lvl * b.def}</div>
           </div>
           <button onclick="upgradeBuilding('${key}')" ${state.truceMode ? "disabled" : ""}>Améliorer (${b.cost} ${b.icon})</button>
         `;
         bCont.appendChild(card);
       });
 
-      // Siège
       document.getElementById("ui-week").textContent = state.week;
       document.getElementById("ui-def").textContent = getTotalDefense();
       document.getElementById("ui-threat").textContent = getThreat();
       document.getElementById("ui-militia-badge").textContent = state.militiaActiveToday ? "🔥 Capacité Spéciale Active !" : "";
       document.getElementById("btn-siege").disabled = state.truceMode;
     }
-function updateClock() {
-      const now = new Date();
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-      const clockElement = document.getElementById("live-clock");
-      if (clockElement) {
-        clockElement.textContent = "🕒 " + now.toLocaleDateString('fr-FR', options);
-      }
-    }
-    // Lancer l'horloge en direct
-    setInterval(updateClock, 1000);
-    updateClock();
+
     render();
   </script>
 </body>
