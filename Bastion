@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bastion WC3 — Les 4 Factions</title>
+  <style>
+    /* THÈME PAR DÉFAUT : ALLIANCE */
+    :root {
+      --bg: #0b111e;
+      --panel: #131d31;
+      --panel-inner: #0e1626;
+      --border: #2c4268;
+      --gold-border: #eab308;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --vivres: #22c55e;
+      --materiaux: #f59e0b;
+      --savoir: #38bdf8;
+      --danger: #ef4444;
+      --faction-primary: #2563eb;
+      --faction-border: #60a5fa;
+      --header-grad: linear-gradient(135deg, #131d31 0%, #1e3a8a 100%);
+    }
+
+    /* THÈME HORDE */
+    body.theme-horde {
+      --bg: #140d0d;
+      --panel: #221515;
+      --panel-inner: #180e0e;
+      --border: #5c2828;
+      --faction-primary: #b91c1c;
+      --faction-border: #f87171;
+      --header-grad: linear-gradient(135deg, #221515 0%, #7f1d1d 100%);
+    }
+
+    /* THÈME ELFES DE LA NUIT */
+    body.theme-nightelf {
+      --bg: #071510;
+      --panel: #0f241c;
+      --panel-inner: #091913;
+      --border: #235340;
+      --gold-border: #c084fc;
+      --faction-primary: #059669;
+      --faction-border: #34d399;
+      --header-grad: linear-gradient(135deg, #0f241c 0%, #3b0764 100%);
+    }
+
+    /* THÈME MORTS-VIVANTS (FLÉAU) */
+    body.theme-undead {
+      --bg: #0d0a14;
+      --panel: #181224;
+      --panel-inner: #110c1a;
+      --border: #3e2e5c;
+      --gold-border: #2dd4bf;
+      --faction-primary: #6d28d9;
+      --faction-border: #a78bfa;
+      --header-grad: linear-gradient(135deg, #181224 0%, #115e59 100%);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1250px; margin: 0 auto; transition: background 0.3s; }
+
+    /* HEADER & TOP BAR */
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--header-grad);
+      padding: 16px 22px; border-radius: 12px;
+      border: 2px solid var(--gold-border); margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .bastion-title h1 { font-size: 1.45rem; color: #fde047; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+    .bastion-title span { font-size: 0.9rem; color: #cbd5e1; }
+
+    .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .resources-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;
+    }
+    .res-card {
+      background: var(--panel); padding: 14px 16px; border-radius: 10px;
+      border: 1px solid var(--border); border-left: 4px solid;
+    }
+    .res-card.vivres { border-left-color: var(--vivres); }
+    .res-card.materiaux { border-left-color: var(--materiaux); }
+    .res-card.savoir { border-left-color: var(--savoir); }
+    .res-card.upkeep { border-left-color: var(--gold-border); }
+    .res-card h3 { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .res-value { font-size: 1.5rem; font-weight: bold; }
+    .upkeep-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* LAYOUT */
+    .grid-main { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; }
+    @media (max-width: 950px) { .grid-main, .resources-bar { grid-template-columns: 1fr; } }
+
+    .col { display: flex; flex-direction: column; gap: 20px; }
+    .panel {
+      background: var(--panel); padding: 18px; border-radius: 12px;
+      border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px;
+    }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border); padding-bottom: 10px; gap: 8px; flex-wrap: wrap;
+    }
+    .panel-header h2 { font-size: 1.1rem; color: #fde047; }
+
+    /* BUTTONS & INPUTS */
+    button {
+      background: #1e293b; color: var(--text); border: 1px solid #475569;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.15s;
+    }
+    button:hover:not(:disabled) { background: #334155; border-color: #94a3b8; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-faction { background: var(--faction-primary); border-color: var(--faction-border); }
+    .btn-faction:hover:not(:disabled) { filter: brightness(1.15); }
+    .btn-gold { background: #b45309; border-color: var(--gold-border); color: #fef08a; }
+    .btn-gold:hover:not(:disabled) { background: #d97706; }
+    .btn-danger { background: #991b1b; border-color: var(--danger); }
+    .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+    .btn-del { background: transparent; border: none; color: var(--muted); font-size: 1rem; padding: 4px 8px; }
+    .btn-del:hover { color: var(--danger); background: transparent; }
+
+    input, select {
+      background: var(--panel-inner); color: var(--text); border: 1px solid var(--border);
+      padding: 8px 10px; border-radius: 6px; flex: 1; font-size: 0.85rem;
+    }
+    .faction-select {
+      background: #090e17; color: #fde047; border: 1px solid var(--gold-border);
+      font-weight: bold; flex: unset; cursor: pointer;
+    }
+    .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* TASKS & CREEPS */
+    .task-list { display: flex; flex-direction: column; gap: 8px; }
+    .task-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--panel-inner); border-radius: 8px; border: 1px solid var(--border);
+    }
+    .task-item.done { opacity: 0.45; text-decoration: line-through; }
+    .task-left { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+    .tag { font-size: 0.72rem; font-weight: 700; }
+    .tag-vivres { color: var(--vivres); }
+    .tag-materiaux { color: var(--materiaux); }
+    .tag-savoir { color: var(--savoir); }
+    .tag-green { color: #4ade80; }
+    .tag-orange { color: #fb923c; }
+    .tag-red { color: #f87171; }
+
+    /* HERO PANEL */
+    .hero-box {
+      background: var(--panel-inner); padding: 14px; border-radius: 10px;
+      border: 1px solid var(--gold-border); display: flex; flex-direction: column; gap: 12px;
+    }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .xp-bar-bg {
+      width: 100%; height: 10px; background: #1e293b; border-radius: 5px; overflow: hidden; border: 1px solid var(--border);
+    }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #7e22ce, #c084fc); width: 0%; transition: 0.3s; }
+    .inventory-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .inv-slot {
+      background: #090e17; border: 1px dashed #334155; border-radius: 6px;
+      padding: 8px; min-height: 48px; display: flex; align-items: center; justify-content: center;
+      text-align: center; font-size: 0.75rem; color: var(--muted);
+    }
+    .inv-slot.filled {
+      border-style: solid; border-color: var(--gold-border); color: #fde047; font-weight: 600; background: #172033;
+    }
+
+    /* BUILDINGS & SIEGE */
+    .building-card {
+      background: var(--panel-inner); padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    }
+    .siege-box {
+      background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .log-box {
+      background: #070b12; padding: 12px; border-radius: 8px; font-size: 0.82rem;
+      color: #cbd5e1; max-height: 150px; overflow-y: auto; border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="bastion-title">
+      <h1 id="ui-tier-title">🏰 Hôtel de Ville de l'Alliance (Tiers 1)</h1>
+      <span id="ui-status-sub">Semaine 1 • Prêt à défendre le Royaume</span>
+      <div id="live-clock" style="font-size: 0.8rem; color: #fde047; margin-top: 4px;"></div>
+    </div>
+    <div class="header-actions">
+      <select id="faction-select" class="faction-select" onchange="changeFaction(this.value)">
+        <option value="alliance">🦁 Alliance de Lordaeron</option>
+        <option value="horde">🐺 Horde de Durotar</option>
+        <option value="nightelf">🌙 Elfes de la Nuit</option>
+        <option value="undead">💀 Morts-Vivants (Fléau)</option>
+      </select>
+      <button class="btn-gold" id="btn-militia" onclick="activateMilitia()">🔔 Appel aux Armes</button>
+      <button id="btn-truce" onclick="toggleTruce()">❄️ Mode Trêve</button>
+      <button class="btn-faction" onclick="newDay()">🌅 Nouvelle Journée</button>
+      <button class="btn-danger" onclick="resetGame()" style="padding: 8px 10px;" title="Recommencer à zéro">♻️ Reset</button>
+    </div>
+  </header>
+
+  <section class="resources-bar">
+    <div class="res-card vivres">
+      <h3>🍖 Ravitaillement (Vitalité)</h3>
+      <div class="res-value" id="res-vivres">0</div>
+    </div>
+    <div class="res-card materiaux">
+      <h3>🪵 Bois (Entretien)</h3>
+      <div class="res-value" id="res-materiaux">0</div>
+    </div>
+    <div class="res-card savoir">
+      <h3>🪙 Or & Savoir (Projets)</h3>
+      <div class="res-value" id="res-savoir">0</div>
+    </div>
+    <div class="res-card upkeep">
+      <h3>⚖️ Entretien (Upkeep)</h3>
+      <div class="res-value" id="ui-upkeep-label" style="font-size:1.15rem; color:#4ade80;">Aucun (100%)</div>
+      <div class="upkeep-sub" id="ui-upkeep-sub">4/4 habitudes max conseillées</div>
+    </div>
+  </section>
+
+  <main class="grid-main">
+    <!-- COLONNE GAUCHE : QUOTIDIEN & CREEPING -->
+    <div class="col">
+      <!-- HABITUDES QUOTIDIENNES -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 id="ui-workers-title">⛏️ Récolte Quotidienne (Paysans)</h2>
+          <span style="font-size:0.78rem; color:var(--muted);">Garde ≤ 4 tâches pour éviter la taxe d'Entretien</span>
+        </div>
+        <div class="task-list" id="daily-list"></div>
+        <div class="form-row">
+          <input type="text" id="daily-title" placeholder="Nouvelle habitude régulière..." />
+          <select id="daily-cat">
+            <option value="vivres">🍖 Vitalité (Sommeil, Sport, Cuisine)</option>
+            <option value="materiaux">🪵 Bois (Ménage, Vaisselle, Rangement)</option>
+            <option value="savoir">🪙 Or & Savoir (Cours, Code, Lecture)</option>
+          </select>
+          <button class="btn-faction" onclick="addDaily()">Ajouter</button>
+        </div>
+      </div>
+
+      <!-- CAMPS DE CREEPS (TÂCHES UNIQUES) -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>🐉 Camps de Creeps (Tâches ponctuelles & Corvées)</h2>
+          <span style="font-size:0.78rem; color:var(--muted);">Donne XP Héros + Or + Objets</span>
+        </div>
+        <div class="task-list" id="creep-list"></div>
+        <div class="form-row">
+          <input type="text" id="creep-title" placeholder="Corvée unique, rendu, administratif..." />
+          <select id="creep-diff">
+            <option value="green">🟢 Camp Gnoll (Facile : +35 XP, +15 🪙)</option>
+            <option value="orange">🟠 Camp Ogre (Moyen : +70 XP, +30 🪙)</option>
+            <option value="red">🔴 Dragon Rouge (Boss : +120 XP, +60 🪙, Objet sûr)</option>
+          </select>
+          <button class="btn-gold" onclick="addCreep()">Ajouter Camp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLONNE DROITE : HÉROS, BÂTIMENTS & SIÈGE -->
+    <div class="col">
+      <!-- AUTEL DES HÉROS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 id="ui-altar-title">👑 Autel des Rois — Ton Héros</h2>
+          <select id="hero-select" onchange="changeHero()" style="max-width:250px;"></select>
+        </div>
+
+        <div class="hero-box">
+          <div class="hero-top">
+            <div>
+              <strong id="ui-hero-name" style="font-size:1.05rem; color:#fde047;">Paladin</strong>
+              <span id="ui-hero-lvl" style="font-size:0.85rem; color:var(--muted); margin-left:6px;">Niveau 1</span>
+              <div id="ui-hero-desc" style="font-size:0.8rem; color:var(--muted); margin-top:2px;"></div>
+            </div>
+            <button class="btn-faction" id="btn-hero-spell" onclick="castHeroSpell()">✨ Lancer Sort</button>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
+              <span>Expérience (Creeping)</span>
+              <span id="ui-hero-xp">0 / 100 XP</span>
+            </div>
+            <div class="xp-bar-bg"><div class="xp-bar-fill" id="ui-xp-bar"></div></div>
+          </div>
+
+          <div>
+            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px;">🎒 Inventaire du Héros (6 Slots — Bonus Défense passif)</div>
+            <div class="inventory-grid" id="inventory-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BÂTIMENTS & SIÈGE -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>🏗️ Infrastructures & Tiers</h2>
+          <button class="btn-gold" id="btn-upgrade-tier" onclick="upgradeTier()">Évoluer</button>
+        </div>
+
+        <div id="buildings-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+        <div class="siege-box">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>🔥 Siège du Dimanche (Semaine <span id="ui-week">1</span>)</h3>
+            <span id="ui-militia-badge" style="font-size:0.78rem; color:#fde047; font-weight:bold;"></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.05rem;">
+            <span style="color:#4ade80;">Défense Totale : <span id="ui-def">0</span></span>
+            <span style="color:#f87171;">Force Ennemie : <span id="ui-threat">0</span></span>
+          </div>
+          <button class="btn-danger" id="btn-siege" onclick="triggerSiege()">⚔️ Résoudre l'Assaut de la Semaine</button>
+        </div>
+
+        <div class="log-box" id="journal">
+          <div>• Bienvenue ! Choisis ta faction parmi les 4 races et valide tes habitudes du jour.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 1. CONFIGURATION MODULAIRE DES 4 FACTIONS DE WARCRAFT III
+    const FACTIONS = {
+      alliance: {
+        name: "Alliance de Lordaeron",
+        themeClass: "",
+        workerName: "Paysans",
+        altarName: "👑 Autel des Rois — Ton Héros",
+        motto: "Défends les terres de Lordaeron",
+        specialBtn: "🔔 Appel aux Armes (Milice)",
+        specialLog: "🔔 APPEL AUX ARMES ! Les paysans prennent les armes : +15 Défense immédiate et +10 ressources par tâche aujourd'hui !",
+        tiers: [
+          { name: "Hôtel de Ville", costWood: 0, costGold: 0, baseDef: 15 },
+          { name: "Donjon", costWood: 60, costGold: 60, baseDef: 40 },
+          { name: "Château", costWood: 120, costGold: 120, baseDef: 80 }
+        ],
+        buildings: {
+          remparts: { name: "🛡️ Tour de Garde & Maçonnerie", res: "materiaux", icon: "🪵", cost: 30, def: 15 },
+          caserne:  { name: "⚔️ Caserne (Fantassins & Fusiliers)", res: "vivres", icon: "🍖", cost: 30, def: 15 },
+          academie: { name: "🔮 Sanctuaire des Arcanes", res: "savoir", icon: "🪙", cost: 30, def: 20 }
+        },
+        heroes: {
+          paladin: {
+            label: "🛡️ Paladin (Régularité)",
+            name: "Paladin",
+            spellName: "✨ Lumière Sacrée (+20 Déf & +15 🍖)",
+            desc: "Spécialiste défensif : soigne ta fatigue et consolide le Bastion.",
+            cast: (s) => { s.tempDef += 20; s.vivres += 15; return "Lumière Sacrée : +20 Défense cette semaine et +15 Ravitaillement !"; }
+          },
+          archimage: {
+            label: "🔮 Archimage (Études & Projets)",
+            name: "Archimage",
+            spellName: "💧 Aura de Brillance (+25 🪙 & +10 Déf)",
+            desc: "Maître du savoir : accélère tes études, ton code et tes projets.",
+            cast: (s) => { s.savoir += 25; s.tempDef += 10; return "Aura de Brillance : +25 Or & Savoir générés et +10 Défense !"; }
+          },
+          mountainKing: {
+            label: "🔨 Roi de la Montagne (Action)",
+            name: "Roi de la Montagne",
+            spellName: "⚡ Marteau-Tempête (+35 Défense de siège)",
+            desc: "Force brute : idéal pour écraser la procrastination et tenir le choc.",
+            cast: (s) => { s.tempDef += 35; return "Marteau-Tempête forgé : +35 Défense pour le siège de cette semaine !"; }
+          }
+        }
+      },
+
+      horde: {
+        name: "Horde de Durotar",
+        themeClass: "theme-horde",
+        workerName: "Péons",
+        altarName: "🔥 Autel des Tempêtes — Ton Héros",
+        motto: "Lok'tar Ogar ! Pour la Horde !",
+        specialBtn: "🩸 Rage Sanguinaire (Pillage)",
+        specialLog: "🩸 LOK'TAR OGAR ! Rage Sanguinaire activée : +15 Défense immédiate et +10 ressources de pillage par tâche aujourd'hui !",
+        tiers: [
+          { name: "Grand Hall", costWood: 0, costGold: 0, baseDef: 15 },
+          { name: "Forteresse", costWood: 60, costGold: 60, baseDef: 40 },
+          { name: "Citadelle", costWood: 120, costGold: 120, baseDef: 80 }
+        ],
+        buildings: {
+          remparts: { name: "🪵 Tour de Guet & Antre des Orcs", res: "materiaux", icon: "🪵", cost: 30, def: 15 },
+          caserne:  { name: "🪓 Caserne (Grunts & Chasseurs de têtes)", res: "vivres", icon: "🍖", cost: 30, def: 18 },
+          academie: { name: "⚡ Loge des Esprits", res: "savoir", icon: "🪙", cost: 30, def: 17 }
+        },
+        heroes: {
+          blademaster: {
+            label: "⚔️ Maître-Lame (Action & Focus)",
+            name: "Maître-Lame",
+            spellName: "🌪️ Lame Tourbillonnante (+35 Défense)",
+            desc: "Exécution rapide : tranche dans le vif des tâches difficiles.",
+            cast: (s) => { s.tempDef += 35; return "Lame Tourbillonnante : +35 Défense offensive pour le siège !"; }
+          },
+          farseer: {
+            label: "🐺 Prophète (Vision & Projets)",
+            name: "Prophète",
+            spellName: "⚡ Chaîne d'Éclairs (+25 🪙 & +10 Déf)",
+            desc: "Sagesse chamanique : booste ta progression intellectuelle et tes projets.",
+            cast: (s) => { s.savoir += 25; s.tempDef += 10; return "Chaîne d'Éclairs : +25 Or & Savoir et +10 Défense !"; }
+          },
+          taurenChieftain: {
+            label: "🐂 Chef Tauren (Endurance & Santé)",
+            name: "Chef Tauren",
+            spellName: "🥁 Aura d'Endurance (+20 Déf & +15 🍖)",
+            desc: "Force tranquille : maintient ton énergie physique et ta régularité.",
+            cast: (s) => { s.tempDef += 20; s.vivres += 15; return "Aura d'Endurance : +20 Défense et +15 Ravitaillement !"; }
+          }
+        }
+      },
+
+      nightelf: {
+        name: "Elfes de la Nuit d'Ashenvale",
+        themeClass: "theme-nightelf",
+        workerName: "Feux Follets",
+        altarName: "🌙 Autel des Anciens — Ton Héros",
+        motto: "Que la lumière d'Elune guide tes pas",
+        specialBtn: "🌿 Déracinement des Anciens",
+        specialLog: "🌿 DÉRACINEMENT ! Les Anciens prennent part au combat et les Puits de Lune débordent : +15 Défense et +10 ressources par tâche aujourd'hui !",
+        tiers: [
+          { name: "Arbre de Vie", costWood: 0, costGold: 0, baseDef: 15 },
+          { name: "Arbre des Âges", costWood: 60, costGold: 60, baseDef: 40 },
+          { name: "Arbre d'Éternité", costWood: 120, costGold: 120, baseDef: 80 }
+        ],
+        buildings: {
+          remparts: { name: "🌳 Ancien Protecteur & Puits de Lune", res: "materiaux", icon: "🪵", cost: 30, def: 16 },
+          caserne:  { name: "🏹 Ancien de la Guerre (Archères & Chasseresses)", res: "vivres", icon: "🍖", cost: 30, def: 16 },
+          academie: { name: "🦉 Ancien du Savoir (Druides)", res: "savoir", icon: "🪙", cost: 30, def: 18 }
+        },
+        heroes: {
+          demonHunter: {
+            label: "🗡️ Chasseur de Démons (Focus Absolu)",
+            name: "Chasseur de Démons",
+            spellName: "😈 Métamorphose (+35 Défense)",
+            desc: "Discipline implacable : idéal pour éliminer les corvées sans hésiter.",
+            cast: (s) => { s.tempDef += 35; return "Métamorphose activée : +35 Défense démoniaque pour le siège !"; }
+          },
+          keeperOfTheGrove: {
+            label: "🦌 Gardien du Bosquet (Harmonie & Savoir)",
+            name: "Gardien du Bosquet",
+            spellName: "🌧️ Tranquillité (+15 🍖, +15 🪵 & +10 Déf)",
+            desc: "Équilibre naturel : régénère ton environnement et ton énergie.",
+            cast: (s) => { s.vivres += 15; s.materiaux += 15; s.tempDef += 10; return "Tranquillité : +15 Ravitaillement, +15 Bois et +10 Défense !"; }
+          },
+          priestessOfTheMoon: {
+            label: "🌙 Prêtresse de la Lune (Précision & Projets)",
+            name: "Prêtresse de la Lune",
+            spellName: "🌠 Étoiles Filantes (+25 🪙 & +15 Déf)",
+            desc: "Clarté nocturne : illumine tes objectifs de fond et soutient tes troupes.",
+            cast: (s) => { s.savoir += 25; s.tempDef += 15; return "Étoiles Filantes : +25 Or & Savoir et +15 Défense !"; }
+          }
+        }
+      },
+
+      undead: {
+        name: "Fléau de Lordaeron",
+        themeClass: "theme-undead",
+        workerName: "Acolytes & Goules",
+        altarName: "💀 Autel des Ténèbres — Ton Héros",
+        motto: "Nous obéissons au Roi-Liche",
+        specialBtn: "❄️ Rituel de Terre Maudite",
+        specialLog: "❄️ TERRE MAUDITE SCELLÉE ! Les Ziggourats deviennent des Tours des Esprits : +15 Défense immédiate et +10 ressources par tâche aujourd'hui !",
+        tiers: [
+          { name: "Nécropole", costWood: 0, costGold: 0, baseDef: 15 },
+          { name: "Salle des Morts", costWood: 60, costGold: 60, baseDef: 40 },
+          { name: "Citadelle Noire", costWood: 120, costGold: 120, baseDef: 80 }
+        ],
+        buildings: {
+          remparts: { name: "🔮 Ziggourat & Tour Nérubienne", res: "materiaux", icon: "🪵", cost: 30, def: 17 },
+          caserne:  { name: "🕸️ Crypte (Goules & Démons des Cryptes)", res: "vivres", icon: "🍖", cost: 30, def: 15 },
+          academie: { name: "🕯️ Temple des Damnés (Nécromanciens)", res: "savoir", icon: "🪙", cost: 30, def: 18 }
+        },
+        heroes: {
+          deathKnight: {
+            label: "🗡️ Chevalier de la Mort (Cadence Implaccable)",
+            name: "Chevalier de la Mort",
+            spellName: "💀 Voile Mortel (+20 Déf & +15 🍖)",
+            desc: "Aura Impie : te permet d'avancer à un rythme soutenu sans faiblir.",
+            cast: (s) => { s.tempDef += 20; s.vivres += 15; return "Voile Mortel : +20 Défense et +15 Ravitaillement régénéré !"; }
+          },
+          lich: {
+            label: "❄️ Liche (Maîtrise Académique & Froideur)",
+            name: "Liche",
+            spellName: "🧊 Nova de Glace (+25 🪙 & +15 Déf)",
+            desc: "Savoir interdit : fige les distractions et maximise ta progression.",
+            cast: (s) => { s.savoir += 25; s.tempDef += 15; return "Nova de Glace : +25 Or & Savoir et +15 Défense glaciale !"; }
+          },
+          dreadlord: {
+            label: "🦇 Seigneur de l'Effroi (Vampirisme & Nuit)",
+            name: "Seigneur de l'Effroi",
+            spellName: "🦇 Essaim Carrion (+35 Défense)",
+            desc: "Aura Vampirique : chaque effort nourrit directement ta résistance.",
+            cast: (s) => { s.tempDef += 35; return "Essaim Carrion lancé : +35 Défense contre l'assaut de la semaine !"; }
+          }
+        }
+      }
+    };
+
+    const LOOT_TABLE = [
+      { name: "Gants de Hâte", def: 8 },
+      { name: "Anneau de Protection", def: 10 },
+      { name: "Bottes de Vitesse", def: 10 },
+      { name: "Tome de Force", def: 12 },
+      { name: "Tome d'Intelligence", def: 12 },
+      { name: "Médaillon de Courage", def: 15 },
+      { name: "Orbe de Givre", def: 18 },
+      { name: "Couronne des Rois", def: 25 }
+    ];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const defaultState = {
+      faction: "alliance",
+      tierIndex: 0,
+      week: 1,
+      vivres: 20,
+      materiaux: 20,
+      savoir: 20,
+      tempDef: 0,
+      militiaUsedThisWeek: false,
+      militiaActiveToday: false,
+      truceMode: false,
+      reconstructionBoost: false,
+      lastDate: todayStr,
+      hero: {
+        type: "paladin",
+        level: 1,
+        xp: 0,
+        spellUsedToday: false,
+        inventory: []
+      },
+      buildings: { remparts: 1, caserne: 1, academie: 1 },
+      dailies: [
+        { id: 1, title: "Dormir 7h30+ & cuisiner un vrai repas", cat: "vivres", done: false },
+        { id: 2, title: "Vaisselle + 15 min de rangement bureau", cat: "materiaux", done: false },
+        { id: 3, title: "Session focus cours / code / projet (45 min)", cat: "savoir", done: false },
+        { id: 4, title: "Sport ou marche rapide en extérieur", cat: "vivres", done: false }
+      ],
+      creeps: [
+        { id: 101, title: "Trier mes mails et régler un papier administratif", diff: "green" },
+        { id: 102, title: "Boucler un livrable / projet important de la semaine", diff: "orange" }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem("bastion_wc3_v2")) || defaultState;
+
+    // VÉRIFICATION AUTOMATIQUE DU PASSAGE DES JOURS
+    if (state.lastDate && state.lastDate !== todayStr) {
+      state.dailies.forEach(t => t.done = false);
+      state.hero.spellUsedToday = false;
+      state.militiaActiveToday = false;
+      state.lastDate = todayStr;
+      log("🌅 Un nouveau jour s'est levé ! Les tâches quotidiennes ont été réinitialisées automatiquement.");
+    } else if (!state.lastDate) {
+      state.lastDate = todayStr;
+    }
+
+    // Sécurité si la sauvegarde vient d'une version précédente
+    if (!FACTIONS[state.faction]) state.faction = "alliance";
+    if (!FACTIONS[state.faction].heroes[state.hero.type]) {
+      state.hero.type = Object.keys(FACTIONS[state.faction].heroes)[0];
+    }
+
+    function save() {
+      localStorage.setItem("bastion_wc3_v2", JSON.stringify(state));
+      render();
+    }
+
+    function log(msg) {
+      const box = document.getElementById("journal");
+      if (!box) return;
+      const div = document.createElement("div");
+      div.style.marginBottom = "5px";
+      div.textContent = "• " + msg;
+      box.prepend(div);
+    }
+
+    // RÉINITIALISATION COMPLÈTE (RESET)
+    function resetGame() {
+      if (confirm("⚠️ Veux-tu vraiment effacer toute ta progression pour recommencer au Tiers 1 ? (Toutes les factions et races restent disponibles, mais tes ressources, ton niveau et ton Héros seront réinitialisés).")) {
+        localStorage.removeItem("bastion_wc3_v2");
+        location.reload();
+      }
+    }
+
+    // CHANGEMENT DE FACTION EN DIRECT
+    function changeFaction(newFaction) {
+      if (!FACTIONS[newFaction]) return;
+      state.faction = newFaction;
+      const firstHeroKey = Object.keys(FACTIONS[newFaction].heroes)[0];
+      state.hero.type = firstHeroKey;
+      log(`Changement d'allégeance : tu diriges désormais la faction ${FACTIONS[newFaction].name} !`);
+      save();
+    }
+
+    // CALCUL DE L'ENTRETIEN (UPKEEP)
+    function getUpkeepMultiplier() {
+      const count = state.dailies.length;
+      if (count <= 4) return { mult: 1, label: "Aucun (100%)", color: "#4ade80", sub: `${count}/4 habitudes (Optimal)` };
+      if (count <= 6) return { mult: 0.8, label: "Faible (80%)", color: "#facc15", sub: `${count} habitudes (Attention à la surcharge)` };
+      return { mult: 0.5, label: "Élevé (50%)", color: "#f87171", sub: `${count} habitudes (Trop de tâches ! Déplace en Creeps)` };
+    }
+
+    // CALCUL DE LA DÉFENSE TOTALE
+    function getTotalDefense() {
+      const f = FACTIONS[state.faction];
+      const tierDef = f.tiers[state.tierIndex].baseDef;
+      const bDef = (state.buildings.remparts * f.buildings.remparts.def)
+                 + (state.buildings.caserne * f.buildings.caserne.def)
+                 + (state.buildings.academie * f.buildings.academie.def);
+      const heroDef = state.hero.level * 10;
+      const itemDef = state.hero.inventory.reduce((sum, item) => sum + item.def, 0);
+      return tierDef + bDef + heroDef + itemDef + state.tempDef;
+    }
+
+    function getThreat() {
+      return 65 + (state.week * 30);
+    }
+
+    // ACTIONS QUOTIDIENNES
+    function completeDaily(id) {
+      if (state.truceMode) return log("Mode Trêve actif : quitte la trêve pour valider des tâches.");
+      const task = state.dailies.find(t => t.id === id);
+      if (!task || task.done) return;
+
+      const f = FACTIONS[state.faction];
+      task.done = true;
+      const upkeep = getUpkeepMultiplier().mult;
+      let baseGain = state.reconstructionBoost ? 30 : 15;
+      if (state.militiaActiveToday) baseGain += 10;
+      const finalGain = Math.round(baseGain * upkeep);
+
+      state[task.cat] += finalGain;
+      if (state.militiaActiveToday) state.tempDef += 5;
+
+      log(`${f.workerName} au travail : "${task.title}" (+${finalGain} ${task.cat}${state.militiaActiveToday ? " & +5 Déf" : ""}).`);
+      save();
+    }
+
+    function addDaily() {
+      const input = document.getElementById("daily-title");
+      const cat = document.getElementById("daily-cat").value;
+      const title = input.value.trim();
+      if (!title) return;
+      state.dailies.push({ id: Date.now(), title, cat, done: false });
+      input.value = "";
+      log(`Nouvelle habitude assignée : "${title}".`);
+      save();
+    }
+
+    function deleteDaily(id) {
+      state.dailies = state.dailies.filter(t => t.id !== id);
+      save();
+    }
+
+    // CREEPING (TÂCHES PONCTUELLES)
+    function addCreep() {
+      const input = document.getElementById("creep-title");
+      const diff = document.getElementById("creep-diff").value;
+      const title = input.value.trim();
+      if (!title) return;
+      state.creeps.push({ id: Date.now(), title, diff });
+      input.value = "";
+      log(`Nouveau camp de Creeps repéré sur la carte : "${title}".`);
+      save();
+    }
+
+    function deleteCreep(id) {
+      state.creeps = state.creeps.filter(c => c.id !== id);
+      save();
+    }
+
+    function clearCreep(id) {
+      if (state.truceMode) return;
+      const idx = state.creeps.findIndex(c => c.id === id);
+      if (idx === -1) return;
+      const creep = state.creeps[idx];
+
+      const rewards = {
+        green:  { xp: 35, gold: 15, dropChance: 0.35 },
+        orange: { xp: 70, gold: 30, dropChance: 0.65 },
+        red:    { xp: 120, gold: 60, dropChance: 1.0 }
+      }[creep.diff];
+
+      state.savoir += rewards.gold;
+      gainHeroXp(rewards.xp);
+
+      let dropMsg = "";
+      if (Math.random() <= rewards.dropChance) {
+        const item = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
+        if (state.hero.inventory.length < 6) {
+          state.hero.inventory.push(item);
+          dropMsg = ` 🎁 Objet trouvé : ${item.name} (+${item.def} Déf) !`;
+        } else {
+          state.savoir += 15;
+          dropMsg = ` (Inventaire plein : butin revendu +15 🪙)`;
+        }
+      }
+
+      state.creeps.splice(idx, 1);
+      log(`Camp nettoyé : "${creep.title}" (+${rewards.xp} XP, +${rewards.gold} 🪙).${dropMsg}`);
+      save();
+    }
+
+    function gainHeroXp(amount) {
+      if (state.hero.level >= 10) return;
+      state.hero.xp += amount;
+      const needed = state.hero.level * 100;
+      if (state.hero.xp >= needed) {
+        state.hero.xp -= needed;
+        state.hero.level = Math.min(10, state.hero.level + 1);
+        log(`🎉 LEVEL UP ! Ton Héros atteint le Niveau ${state.hero.level} (+10 Défense permanente) !`);
+      }
+    }
+
+    // HÉROS & CAPACITÉS SPÉCIALES
+    function changeHero() {
+      const val = document.getElementById("hero-select").value;
+      state.hero.type = val;
+      log(`Tu as invoqué le ${FACTIONS[state.faction].heroes[val].name}.`);
+      save();
+    }
+
+    function castHeroSpell() {
+      if (state.truceMode || state.hero.spellUsedToday) return;
+      const heroData = FACTIONS[state.faction].heroes[state.hero.type];
+      const msg = heroData.cast(state);
+      state.hero.spellUsedToday = true;
+      log(`👑 Sort de Héros — ${msg}`);
+      save();
+    }
+
+    function activateMilitia() {
+      if (state.truceMode || state.militiaUsedThisWeek) return;
+      const f = FACTIONS[state.faction];
+      state.militiaUsedThisWeek = true;
+      state.militiaActiveToday = true;
+      state.tempDef += 15;
+      log(f.specialLog);
+      save();
+    }
+
+    // BÂTIMENTS & TIERS
+    function upgradeBuilding(key) {
+      if (state.truceMode) return;
+      const b = FACTIONS[state.faction].buildings[key];
+      if (state[b.res] < b.cost) return log(`Ressources insuffisantes (${b.cost} ${b.icon} requis).`);
+      state[b.res] -= b.cost;
+      state.buildings[key]++;
+      log(`Bâtiment amélioré : ${b.name} passe au niveau ${state.buildings[key]} !`);
+      save();
+    }
+
+    function upgradeTier() {
+      if (state.truceMode || state.tierIndex >= 2) return;
+      const nextTier = FACTIONS[state.faction].tiers[state.tierIndex + 1];
+      if (state.materiaux < nextTier.costWood || state.savoir < nextTier.costGold) {
+        return log(`Il te faut ${nextTier.costWood} 🪵 et ${nextTier.costGold} 🪙 pour passer au ${nextTier.name}.`);
+      }
+      state.materiaux -= nextTier.costWood;
+      state.savoir -= nextTier.costGold;
+      state.tierIndex++;
+      log(`🏰 ÉVOLUTION MAJEURE : Ton bastion devient un ${nextTier.name} !`);
+      save();
+    }
+
+    // CYCLE & SIÈGE
+    function newDay() {
+      state.dailies.forEach(t => t.done = false);
+      state.hero.spellUsedToday = false;
+      state.militiaActiveToday = false;
+      state.lastDate = new Date().toISOString().split('T')[0];
+      log("🌅 Une nouvelle journée commence. Tâches quotidiennes et sort du Héros réinitialisés.");
+      save();
+    }
+
+    function toggleTruce() {
+      state.truceMode = !state.truceMode;
+      log(state.truceMode ? "❄️ Mode Trêve activé : le Bastion est gelé." : "🔥 Fin de la Trêve : reprise des opérations.");
+      save();
+    }
+
+    function triggerSiege() {
+      if (state.truceMode) return;
+      const def = getTotalDefense();
+      const threat = getThreat();
+
+      if (def >= threat) {
+        state.week++;
+        state.reconstructionBoost = false;
+        gainHeroXp(50);
+        log(`🏆 VICTOIRE HÉROÏQUE (${def} contre ${threat}) ! Le siège est brisé, ton Héros gagne +50 XP !`);
+      } else {
+        state.week++;
+        state.reconstructionBoost = true;
+        if (state.buildings.remparts > 1) state.buildings.remparts--;
+        log(`🛡️ REPLI STRATÉGIQUE (${def} contre ${threat}). Les murs ont souffert, mais "Effort de Reconstruction (Gains x2)" est activé !`);
+      }
+
+      state.tempDef = 0;
+      state.militiaUsedThisWeek = false;
+      state.militiaActiveToday = false;
+      state.hero.spellUsedToday = false;
+      state.dailies.forEach(t => t.done = false);
+      save();
+    }
+
+    // RENDU UI
+    function render() {
+      const f = FACTIONS[state.faction];
+      const tier = f.tiers[state.tierIndex];
+
+      // Appliquer le thème visuel des 4 factions
+      document.body.className = f.themeClass;
+      document.getElementById("faction-select").value = state.faction;
+
+      document.getElementById("ui-tier-title").textContent = `🏰 ${tier.name} — ${f.name} (Tiers ${state.tierIndex + 1})`;
+      document.getElementById("ui-workers-title").textContent = `⛏️ Récolte Quotidienne (${f.workerName})`;
+      document.getElementById("ui-altar-title").textContent = f.altarName;
+
+      document.getElementById("ui-status-sub").textContent = state.truceMode
+        ? `❄️ Mode Trêve Actif — Aucune pénalité`
+        : state.reconstructionBoost
+          ? `🔨 Effort de Reconstruction Actif (Gains doublés !)`
+          : `Semaine ${state.week} • ${f.motto}`;
+
+      document.getElementById("res-vivres").textContent = state.vivres;
+      document.getElementById("res-materiaux").textContent = state.materiaux;
+      document.getElementById("res-savoir").textContent = state.savoir;
+
+      const upkeep = getUpkeepMultiplier();
+      const upLabel = document.getElementById("ui-upkeep-label");
+      upLabel.textContent = upkeep.label;
+      upLabel.style.color = upkeep.color;
+      document.getElementById("ui-upkeep-sub").textContent = upkeep.sub;
+
+      // Boutons globaux
+      document.getElementById("btn-militia").disabled = state.militiaUsedThisWeek || state.truceMode;
+      document.getElementById("btn-militia").textContent = state.militiaUsedThisWeek ? "Capacité déjà utilisée (Semaine)" : f.specialBtn;
+      document.getElementById("btn-truce").textContent = state.truceMode ? "🔥 Quitter la Trêve" : "❄️ Mode Trêve";
+
+      // Liste Habitudes
+      const dList = document.getElementById("daily-list");
+      dList.innerHTML = "";
+      const catNames = { vivres: "🍖 Ravitaillement", materiaux: "🪵 Bois", savoir: "🪙 Or & Savoir" };
+      let baseGain = state.reconstructionBoost ? 30 : 15;
+      if (state.militiaActiveToday) baseGain += 10;
+      const gain = Math.round(baseGain * upkeep.mult);
+
+      state.dailies.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "task-item" + (t.done ? " done" : "");
+        div.innerHTML = `
+          <div class="task-left">
+            <strong>${t.title}</strong>
+            <span class="tag tag-${t.cat}">${catNames[t.cat]} (+${gain})</span>
+          </div>
+          <button onclick="completeDaily(${t.id})" ${t.done || state.truceMode ? "disabled" : ""}>${t.done ? "Fait ✓" : "Valider"}</button>
+          <button class="btn-del" title="Supprimer" onclick="deleteDaily(${t.id})">✕</button>
+        `;
+        dList.appendChild(div);
+      });
+
+      // Liste Creeps
+      const cList = document.getElementById("creep-list");
+      cList.innerHTML = "";
+      const diffLabels = {
+        green: { text: "🟢 Camp Gnoll (+35 XP, +15 🪙)", cls: "tag-green" },
+        orange: { text: "🟠 Camp Ogre (+70 XP, +30 🪙)", cls: "tag-orange" },
+        red: { text: "🔴 Dragon Rouge (+120 XP, +60 🪙, Objet 100%)", cls: "tag-red" }
+      };
+      state.creeps.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "task-item";
+        div.innerHTML = `
+          <div class="task-left">
+            <strong>${c.title}</strong>
+            <span class="tag ${diffLabels[c.diff].cls}">${diffLabels[c.diff].text}</span>
+          </div>
+          <button class="btn-gold" onclick="clearCreep(${c.id})" ${state.truceMode ? "disabled" : ""}>⚔️ Attaquer</button>
+          <button class="btn-del" title="Supprimer" onclick="deleteCreep(${c.id})">✕</button>
+        `;
+        cList.appendChild(div);
+      });
+
+      // Menu déroulant dynamique des Héros selon la faction active
+      const heroSelect = document.getElementById("hero-select");
+      heroSelect.innerHTML = "";
+      Object.keys(f.heroes).forEach(hKey => {
+        const opt = document.createElement("option");
+        opt.value = hKey;
+        opt.textContent = f.heroes[hKey].label;
+        heroSelect.appendChild(opt);
+      });
+      heroSelect.value = state.hero.type;
+
+      const hData = f.heroes[state.hero.type];
+      document.getElementById("ui-hero-name").textContent = hData.name;
+      document.getElementById("ui-hero-lvl").textContent = `Niveau ${state.hero.level} (+${state.hero.level * 10} Déf)`;
+      document.getElementById("ui-hero-desc").textContent = hData.desc;
+
+      const spellBtn = document.getElementById("btn-hero-spell");
+      spellBtn.textContent = state.hero.spellUsedToday ? "Sort rechargé demain" : hData.spellName;
+      spellBtn.disabled = state.hero.spellUsedToday || state.truceMode;
+
+      const neededXp = state.hero.level * 100;
+      document.getElementById("ui-hero-xp").textContent = state.hero.level >= 10 ? "NIVEAU MAX (10)" : `${state.hero.xp} / ${neededXp} XP`;
+      document.getElementById("ui-xp-bar").style.width = state.hero.level >= 10 ? "100%" : `${Math.min(100, (state.hero.xp / neededXp) * 100)}%`;
+
+      const invGrid = document.getElementById("inventory-grid");
+      invGrid.innerHTML = "";
+      for (let i = 0; i < 6; i++) {
+        const slot = document.createElement("div");
+        const item = state.hero.inventory[i];
+        if (item) {
+          slot.className = "inv-slot filled";
+          slot.textContent = `${item.name} (+${item.def})`;
+        } else {
+          slot.className = "inv-slot";
+          slot.textContent = `Slot ${i + 1} vide`;
+        }
+        invGrid.appendChild(slot);
+      }
+
+      // Bâtiments & Tiers
+      const tierBtn = document.getElementById("btn-upgrade-tier");
+      if (state.tierIndex >= 2) {
+        tierBtn.textContent = `🏰 ${tier.name} Max (Tiers 3)`;
+        tierBtn.disabled = true;
+      } else {
+        const nextT = f.tiers[state.tierIndex + 1];
+        tierBtn.textContent = `Évoluer en ${nextT.name} (${nextT.costWood} 🪵 / ${nextT.costGold} 🪙)`;
+        tierBtn.disabled = state.truceMode;
+      }
+
+      const bCont = document.getElementById("buildings-container");
+      bCont.innerHTML = "";
+      Object.keys(f.buildings).forEach(key => {
+        const b = f.buildings[key];
+        const lvl = state.buildings[key];
+        const card = document.createElement("div");
+        card.className = "building-card";
+        card.innerHTML = `
+          <div>
+            <strong>${b.name}</strong> (Niv. ${lvl})
+            <div style="font-size:0.78rem; color:var(--muted);">Défense : +${lvl * b.def} (+${b.def}/niv)</div>
+          </div>
+          <button onclick="upgradeBuilding('${key}')" ${state.truceMode ? "disabled" : ""}>Améliorer (${b.cost} ${b.icon})</button>
+        `;
+        bCont.appendChild(card);
+      });
+
+      // Siège
+      document.getElementById("ui-week").textContent = state.week;
+      document.getElementById("ui-def").textContent = getTotalDefense();
+      document.getElementById("ui-threat").textContent = getThreat();
+      document.getElementById("ui-militia-badge").textContent = state.militiaActiveToday ? "🔥 Capacité Spéciale Active !" : "";
+      document.getElementById("btn-siege").disabled = state.truceMode;
+    }
+function updateClock() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const clockElement = document.getElementById("live-clock");
+      if (clockElement) {
+        clockElement.textContent = "🕒 " + now.toLocaleDateString('fr-FR', options);
+      }
+    }
+    // Lancer l'horloge en direct
+    setInterval(updateClock, 1000);
+    updateClock();
+    render();
+  </script>
+</body>
+</html>
